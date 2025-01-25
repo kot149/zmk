@@ -43,7 +43,7 @@ jobs:
           yaml2json "${{ inputs.build_matrix_path }}" | jq
 
   build:
-    runs-on: ubuntu-latest-arm
+    runs-on: ubuntu-24.04-arm
     container:
       image: zmkfirmware/zmk-build-arm:stable@arm64
     needs: matrix
@@ -170,7 +170,7 @@ jobs:
           path: ${{ env.build_dir }}/artifacts
 
   merge:
-    runs-on: ubuntu-latest-arm
+    runs-on: ubuntu-24.04-arm
     needs: build
     name: Merge Output Artifacts
     steps:
