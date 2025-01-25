@@ -45,8 +45,7 @@ jobs:
   build:
     runs-on: ubuntu-latest-arm
     container:
-      image: zmkfirmware/zmk-build-arm:stable
-      platform: linux/arm64
+      image: zmkfirmware/zmk-build-arm:stable@arm64
     needs: matrix
     name: Build
     strategy:
