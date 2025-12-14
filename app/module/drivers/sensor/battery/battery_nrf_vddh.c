@@ -87,7 +87,7 @@ static int vddh_init(const struct device *dev) {
         .channels = BIT(0),
         .buffer = &drv_data->value.adc_raw,
         .buffer_size = sizeof(drv_data->value.adc_raw),
-        .oversampling = 4,
+        .oversampling = 0,
         .calibrate = true,
     };
 
