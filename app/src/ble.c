@@ -53,6 +53,45 @@ enum advertising_type {
     ZMK_ADV_CONN,
 } advertising_status;
 
+#if IS_ENABLED(CONFIG_BT_EXT_ADV)
+static struct bt_le_ext_adv *adv;
+
+static int zmk_ble_adv_start(const struct bt_le_adv_param *param, const struct bt_data *ad,
+                             size_t ad_len, const struct bt_data *sd, size_t sd_len) {
+    int err;
+    if (adv) {
+        bt_le_ext_adv_stop(adv);
+        bt_le_ext_adv_delete(adv);
+        adv = NULL;
+    }
+
+    err = bt_le_ext_adv_create(param, NULL, &adv);
+    if (err) {
+        LOG_ERR("Failed to create advertising instance (err %d)", err);
+        return err;
+    }
+
+    err = bt_le_ext_adv_set_data(adv, ad, ad_len, sd, sd_len);
+    if (err) {
+        LOG_ERR("Failed to set advertising data (err %d)", err);
+        return err;
+    }
+
+    return bt_le_ext_adv_start(adv, BT_LE_EXT_ADV_START_DEFAULT);
+}
+
+static int zmk_ble_adv_stop(void) {
+    if (adv) {
+        return bt_le_ext_adv_stop(adv);
+    }
+
+    return 0;
+}
+#else
+#define zmk_ble_adv_start bt_le_adv_start
+#define zmk_ble_adv_stop bt_le_adv_stop
+#endif
+
 #define CURR_ADV(adv) (adv << 4)
 
 #define ZMK_ADV_CONN_NAME                                                                          \
@@ -146,7 +185,7 @@ bool zmk_ble_profile_is_connected(uint8_t index) {
 }
 
 #define CHECKED_ADV_STOP()                                                                         \
-    err = bt_le_adv_stop();                                                                        \
+    err = zmk_ble_adv_stop();                                                                      \
     advertising_status = ZMK_ADV_NONE;                                                             \
     if (err) {                                                                                     \
         LOG_ERR("Failed to stop advertising (err %d)", err);                                       \
@@ -161,7 +200,7 @@ bool zmk_ble_profile_is_connected(uint8_t index) {
         bt_conn_unref(conn);                                                                       \
         return 0;                                                                                  \
     }                                                                                              \
-    err = bt_le_adv_start(BT_LE_ADV_CONN_DIR_LOW_DUTY(addr), zmk_ble_ad, ARRAY_SIZE(zmk_ble_ad),   \
+    err = zmk_ble_adv_start(BT_LE_ADV_CONN_DIR_LOW_DUTY(addr), zmk_ble_ad, ARRAY_SIZE(zmk_ble_ad),   \
                           NULL, 0);                                                                \
     if (err) {                                                                                     \
         LOG_ERR("Advertising failed to start (err %d)", err);                                      \
@@ -170,7 +209,7 @@ bool zmk_ble_profile_is_connected(uint8_t index) {
     advertising_status = ZMK_ADV_DIR;
 
 #define CHECKED_OPEN_ADV()                                                                         \
-    err = bt_le_adv_start(ZMK_ADV_CONN_NAME, zmk_ble_ad, ARRAY_SIZE(zmk_ble_ad), NULL, 0);         \
+    err = zmk_ble_adv_start(ZMK_ADV_CONN_NAME, zmk_ble_ad, ARRAY_SIZE(zmk_ble_ad), NULL, 0);         \
     if (err) {                                                                                     \
         LOG_ERR("Advertising failed to start (err %d)", err);                                      \
         return err;                                                                                \
@@ -368,7 +407,7 @@ int zmk_ble_set_device_name(char *name) {
     }
     if (advertising_status == ZMK_ADV_CONN) {
         // Stop current advertising so it can restart with new name
-        err = bt_le_adv_stop();
+        err = zmk_ble_adv_stop();
         advertising_status = ZMK_ADV_NONE;
         if (err) {
             LOG_ERR("Failed to stop advertising (err %d)", err);
